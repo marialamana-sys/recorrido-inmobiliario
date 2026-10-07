@@ -37,6 +37,7 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             st.warning("⚠️ **Aviso del Sistema:** Se ha detectado la condición 'María tiene el pelo sucio'.")
 
         try:
+            # Cliente del nuevo SDK oficial
             client = genai.Client(api_key=gemini_key.strip())
             
             prompt_gemini = f"""
@@ -54,26 +55,11 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             (Escribe aquí 3 prompts en INGLÉS optimizados para IAs de vídeo como Kling AI o Hailuo AI especificando movimientos de cámara, iluminación y estética).
             """
 
-            # Lista de modelos por orden de preferencia para evitar fallos 503
-            modelos_a_probar = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
-            response = None
-            ultimo_error = None
-
-            with st.spinner("Conectando con Gemini y generando voz..."):
-                for model_id in modelos_a_probar:
-                    try:
-                        response = client.models.generate_content(
-                            model=model_id,
-                            contents=prompt_gemini
-                        )
-                        if response and response.text:
-                            break
-                    except Exception as err:
-                        ultimo_error = err
-                        continue
-                
-                if not response or not response.text:
-                    raise Exception(f"Los servidores de Google están saturados temporalmente. Detalle: {ultimo_error}")
+            with st.spinner("Procesando con Gemini y generando voz..."):
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt_gemini
+                )
 
                 respuesta_texto = response.text
                 
@@ -108,4 +94,4 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
                 st.markdown(respuesta_texto)
                 
         except Exception as e:
-            st.error(f"Error en el proceso: {e}")
+            st.error(f"Error al conectar con Gemini: {e}")
