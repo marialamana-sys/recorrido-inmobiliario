@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 from gtts import gTTS
 import io
 
@@ -37,11 +37,8 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             st.warning("⚠️ **Aviso del Sistema:** Se ha detectado la condición 'María tiene el pelo sucio'.")
 
         try:
-            genai.configure(api_key=gemini_key.strip())
-            
-            # Modelos vigentes recomendados por la API oficial
-            modelos_disponibles = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-1.5-flash']
-            response = None
+            # Cliente oficial con el SDK genai
+            client = genai.Client(api_key=gemini_key.strip())
             
             prompt_gemini = f"""
             Actúa como un director cinematográfico inmobiliario. En base a estos datos:
@@ -59,18 +56,12 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             """
 
             with st.spinner("Procesando con Gemini y generando voz..."):
-                for nombre_modelo in modelos_disponibles:
-                    try:
-                        model = genai.GenerativeModel(nombre_modelo)
-                        response = model.generate_content(prompt_gemini)
-                        if response and response.text:
-                            break
-                    except Exception:
-                        continue
+                # Modelo 'gemini-2.0-flash' compatible con el SDK actual
+                response = client.models.generate_content(
+                    model='gemini-2.0-flash',
+                    contents=prompt_gemini
+                )
                 
-                if not response:
-                    raise Exception("No se pudo conectar a ninguno de los modelos vigentes de Gemini.")
-
                 respuesta_texto = response.text
                 
                 # Extraer el guion para generar la locución
