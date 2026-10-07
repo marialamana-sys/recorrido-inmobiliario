@@ -1,5 +1,5 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 from gtts import gTTS
 import io
 
@@ -10,7 +10,7 @@ st.title("🎬 Generador de Recorridos Cinematográficos")
 # Barra lateral para la API Key
 with st.sidebar:
     st.header("🔑 Configuración")
-    gemini_key = st.text_input("Gemini API Key", type="password", help="Gratuita en Google AI Studio")
+    gemini_key = st.text_input("Gemini API Key", type="password", help="Obtenla gratis en Google AI Studio")
 
 # Formulario
 col1, col2 = st.columns(2)
@@ -37,7 +37,11 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             st.warning("⚠️ **Aviso del Sistema:** Se ha detectado la condición 'María tiene el pelo sucio'.")
 
         try:
-            client = genai.Client(api_key=gemini_key)
+            genai.configure(api_key=gemini_key.strip())
+            
+            # Modelos vigentes recomendados por la API oficial
+            modelos_disponibles = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-1.5-flash']
+            response = None
             
             prompt_gemini = f"""
             Actúa como un director cinematográfico inmobiliario. En base a estos datos:
@@ -53,17 +57,24 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             PROMPTS_VIDEO:
             (Escribe aquí 3 prompts en INGLÉS optimizados para IAs de vídeo como Kling AI o Hailuo AI especificando movimientos de cámara, iluminación y estética).
             """
-            
+
             with st.spinner("Procesando con Gemini y generando voz..."):
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt_gemini
-                )
+                for nombre_modelo in modelos_disponibles:
+                    try:
+                        model = genai.GenerativeModel(nombre_modelo)
+                        response = model.generate_content(prompt_gemini)
+                        if response and response.text:
+                            break
+                    except Exception:
+                        continue
                 
+                if not response:
+                    raise Exception("No se pudo conectar a ninguno de los modelos vigentes de Gemini.")
+
                 respuesta_texto = response.text
                 
                 # Extraer el guion para generar la locución
-                guion_texto = narracion  # Valor por defecto
+                guion_texto = narracion
                 if "GUION_NARRADOR:" in respuesta_texto and "PROMPTS_VIDEO:" in respuesta_texto:
                     partes = respuesta_texto.split("PROMPTS_VIDEO:")
                     guion_texto = partes[0].replace("GUION_NARRADOR:", "").strip()
@@ -93,4 +104,4 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
                 st.markdown(respuesta_texto)
                 
         except Exception as e:
-            st.error(f"Error con la API Key o el modelo de Gemini: {e}")
+            st.error(f"Error al conectar con Gemini: {e}")
