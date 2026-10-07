@@ -56,7 +56,7 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             
             with st.spinner("Procesando con Gemini y generando voz..."):
                 response = client.models.generate_content(
-                    model="gemini-1.5-flash",
+                    model="gemini-2.5-flash",
                     contents=prompt_gemini
                 )
                 
