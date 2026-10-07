@@ -37,7 +37,6 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             st.warning("⚠️ **Aviso del Sistema:** Se ha detectado la condición 'María tiene el pelo sucio'.")
 
         try:
-            # Cliente del nuevo SDK oficial
             client = genai.Client(api_key=gemini_key.strip())
             
             prompt_gemini = f"""
@@ -55,9 +54,29 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             (Escribe aquí 3 prompts en INGLÉS optimizados para IAs de vídeo como Kling AI o Hailuo AI especificando movimientos de cámara, iluminación y estética).
             """
 
-            with st.spinner("Procesando con Gemini y generando voz..."):
+            with st.spinner("Buscando modelo activo en tu cuenta de Google y generando contenido..."):
+                # 1. Obtener la lista real de modelos disponibles para TU API Key
+                modelos_disponibles = list(client.models.list())
+                
+                # Filtrar modelos válidos que soporten la generación de contenido
+                modelo_elegido = None
+                for m in modelos_disponibles:
+                    nombre = getattr(m, 'name', '')
+                    # Priorizamos modelos 'flash'
+                    if 'flash' in nombre.lower() and 'embed' not in nombre.lower():
+                        modelo_elegido = nombre
+                        break
+                
+                # Si no encuentra ninguno con 'flash', toma el primero disponible
+                if not modelo_elegido and modelos_disponibles:
+                    modelo_elegido = modelos_disponibles[0].name
+                
+                if not modelo_elegido:
+                    raise Exception("Tu API Key no tiene acceso a ningún modelo activo actualmente.")
+
+                # 2. Generar el contenido con el modelo detectado automáticamente
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=modelo_elegido,
                     contents=prompt_gemini
                 )
 
@@ -75,7 +94,7 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
                 tts.write_to_fp(fp)
                 fp.seek(0)
 
-                st.success("¡Prompts, Guion y Locución generados con éxito!")
+                st.success(f"¡Prompts, Guion y Locución generados con éxito usando el modelo `{modelo_elegido}`!")
                 
                 # Reproductor y Descarga de Audio
                 st.subheader("🔊 Locución del Narrador (Audio MP3)")
