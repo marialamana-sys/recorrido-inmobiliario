@@ -37,7 +37,6 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             st.warning("⚠️ **Aviso del Sistema:** Se ha detectado la condición 'María tiene el pelo sucio'.")
 
         try:
-            # Eliminar posibles espacios accidentales en la API Key
             api_key_clean = gemini_key.strip()
             client = genai.Client(api_key=api_key_clean)
             
@@ -56,12 +55,10 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
             (Escribe aquí 3 prompts en INGLÉS optimizados para IAs de vídeo como Kling AI o Hailuo AI especificando movimientos de cámara, iluminación y estética).
             """
 
-            # Lista de modelos compatibles ordenada por estabilidad actual
+            # Modelos oficiales vigentes requeridos por la API de Google
             modelos_compatibles = [
-                'gemini-2.5-flash',
-                'gemini-2.0-flash',
-                'gemini-2.0-flash-lite',
-                'gemini-1.5-flash'
+                'gemini-3.8-flash',
+                'gemini-3.5-flash-lite'
             ]
 
             response = None
@@ -85,7 +82,7 @@ if st.button("🚀 Generar Prompts, Guion y Audio", type="primary"):
 
                 if not response:
                     errores_log = "\n".join(historial_errores)
-                    raise Exception(f"No se pudo conectar con ningún modelo. Detalles de los intentos:\n{errores_log}")
+                    raise Exception(f"No se pudo conectar con ningún modelo. Detalles:\n{errores_log}")
 
                 respuesta_texto = response.text
                 
