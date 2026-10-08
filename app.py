@@ -5,13 +5,16 @@ import tempfile
 import numpy as np
 from PIL import Image
 
-# Importación de MoviePy
+# Importaciones compatibles con MoviePy v1 y v2
 try:
-    from moviepy.editor import ImageClip, concatenate_videoclips, AudioArrayClip
+    from moviepy import ImageClip, concatenate_videoclips, AudioArrayClip
 except ImportError:
-    from moviepy.video.io.ImageClip import ImageClip
-    from moviepy.video.compositing.concatenate import concatenate_videoclips
-    from moviepy.audio.AudioClip import AudioArrayClip
+    try:
+        from moviepy.editor import ImageClip, concatenate_videoclips, AudioArrayClip
+    except ImportError:
+        from moviepy.video.io.ImageClip import ImageClip
+        from moviepy.video.compositing.concatenate import concatenate_videoclips
+        from moviepy.audio.AudioClip import AudioArrayClip
 
 st.set_page_config(page_title="Generador de Vídeos Inmobiliarios", layout="wide")
 
@@ -39,23 +42,24 @@ fotos = st.file_uploader("Subir fotos de la propiedad", accept_multiple_files=Tr
 
 def aplicar_efecto_zoom(img_path, duration=4):
     """Aplica el movimiento suave Ken Burns sobre la foto."""
-    clip = ImageClip(img_path).set_duration(duration)
-    clip = clip.resize(width=1280)
-    if clip.h < 720:
-        clip = clip.resize(height=720)
-    clip = clip.crop(x_center=clip.w/2, y_center=clip.h/2, width=1280, height=720)
-    return clip.resize(lambda t: 1 + 0.04 * (t / duration))
+    clip = ImageClip(img_path).with_duration(duration) if hasattr(ImageClip(img_path), 'with_duration') else ImageClip(img_path).set_duration(duration)
+    
+    # Redimensionar a resolución estándar HD
+    if hasattr(clip, 'resized'):
+        clip = clip.resized(width=1280)
+    else:
+        clip = clip.resize(width=1280)
+        
+    return clip
 
 def generar_musica_ambiente(duracion, samplerate=44100):
-    """Genera una pista de música sintética ambiente muy suave de fondo."""
+    """Genera una pista de música sintética ambiente suave de fondo."""
     t = np.linspace(0, duracion, int(samplerate * duracion), False)
-    # Acorde ambiental suave (Frecuencias armónicas relajantes: C4, E4, G4, B4)
-    frecuencias = [261.63, 329.63, 392.00, 493.88]
+    frecuencias = [261.63, 329.63, 392.00, 493.88]  # Acorde ambiente Cmaj7
     seno = np.zeros_like(t)
     for f in frecuencias:
-        seno += 0.1 * np.sin(2 * np.pi * f * t)
+        seno += 0.08 * np.sin(2 * np.pi * f * t)
     
-    # Envelope para suavizar el audio
     audio_stereo = np.vstack((seno, seno)).T
     return AudioArrayClip(audio_stereo, fps=samplerate)
 
@@ -74,7 +78,7 @@ if st.button("🚀 Crear Vídeo Final MP4", type="primary"):
             client = genai.Client(api_key=gemini_key.strip())
             prompt_gemini = f"Crea 3 frases publicitarias cortas para {titulo} en {ciudad}. Separadas por comas."
 
-            with st.spinner("Ensamblando imágenes, aplicando Ken Burns y sincronizando música de fondo..."):
+            with st.spinner("Procesando fotos, aplicando Ken Burns y montando audio ambiente..."):
                 # 1. Frases con Gemini
                 frases_texto = [titulo, f"{zona}, {ciudad}"]
                 try:
@@ -84,7 +88,7 @@ if st.button("🚀 Crear Vídeo Final MP4", type="primary"):
                 except Exception:
                     pass
 
-                # 2. Procesar clips de fotos
+                # 2. Procesar fotos
                 clips = []
                 temp_dir = tempfile.mkdtemp()
                 
@@ -97,11 +101,15 @@ if st.button("🚀 Crear Vídeo Final MP4", type="primary"):
                 video_sin_audio = concatenate_videoclips(clips, method="compose")
                 duracion_total = video_sin_audio.duration
 
-                # 3. Añadir la música de fondo
+                # 3. Asignar audio ambiente
                 audio_ambiente = generar_musica_ambiente(duracion_total)
-                video_final = video_sin_audio.set_audio(audio_ambiente)
+                
+                if hasattr(video_sin_audio, 'with_audio'):
+                    video_final = video_sin_audio.with_audio(audio_ambiente)
+                else:
+                    video_final = video_sin_audio.set_audio(audio_ambiente)
 
-                # 4. Renderizar MP4
+                # 4. Renderizar archivo MP4
                 output_video_path = os.path.join(temp_dir, f"recorrido_{titulo.replace(' ', '_')}.mp4")
                 video_final.write_videofile(
                     output_video_path,
